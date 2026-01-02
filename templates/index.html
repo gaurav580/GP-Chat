@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GP Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ===== PWA META ===== -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#020617">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+
+  <!-- ===== CSS ===== -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <div class="header">
+
+    <!-- LEFT : AVATAR + NAME -->
+    <div class="header-left">
+
+      <div class="avatar-wrap">
+        <img src="{{ url_for('static', filename='bg.jpg') }}" class="avatar" alt="GP Chat">
+        <span class="status-dot"></span>
+      </div>
+
+      <div class="title">
+        <div class="name">GP Chat ✨</div>
+        <div class="online">Online</div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT : MENU -->
+    <div class="menu">
+      <button id="menuBtn">⋮</button>
+
+      <div id="menuBox" class="menu-box">
+        <button onclick="openHistory()">🔱 Chat Memory</button>
+        <button onclick="clearHistory()">🕉️ Reset Memory</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- ================= HEADER END ================= -->
+
+  <!-- ================= CHAT AREA ================= -->
+  <div class="chat" id="chat">
+    <!-- messages yahan append honge -->
+  </div>
+
+  <!-- ================= INPUT ================= -->
+  <div class="input">
+    <input id="msg" placeholder="Type a message..." autocomplete="off">
+    <button onclick="sendMsg()">➤</button>
+  </div>
+
+</div>
+
+<!-- ================= SCRIPT FILE ================= -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+<!-- ================= MENU TOGGLE ================= -->
+<script>
+  const menuBtn = document.getElementById("menuBtn");
+  const menuBox = document.getElementById("menuBox");
+
+  menuBtn.onclick = () => {
+    menuBox.style.display =
+      menuBox.style.display === "block" ? "none" : "block";
+  };
+
+  document.addEventListener("click", (e) => {
+    if (!menuBtn.contains(e.target) && !menuBox.contains(e.target)) {
+      menuBox.style.display = "none";
+    }
+  });
+</script>
+
+<!-- ================= SERVICE WORKER ================= -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('{{ url_for("static", filename="sw.js") }}')
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.log("SW error:", err));
+    });
+  }
+</script>
+
+</body>
+</html>
