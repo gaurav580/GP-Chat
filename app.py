@@ -25,7 +25,9 @@ conversation = [
             "English → English\n"
             "Hindi → Hindi\n"
             "Hinglish → Hinglish\n"
-            "Be polite, helpful, and clear."
+            "Be polite, helpful, and clear.\n"
+            "If asked about your creator, always reply exactly:\n"
+            "'I was created by Gaurav Pathak.'"
         )
     }
 ]
@@ -37,11 +39,41 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        user_msg = request.json.get("message")
+        user_msg = request.json.get("message", "").strip()
 
         if not user_msg:
             return jsonify({"reply": "Message empty hai."})
 
+        msg_lower = user_msg.lower()
+
+        # 🔒 HARD CREATOR FIX (ALL LANGUAGES)
+        creator_triggers = [
+            # English
+            "who made you",
+            "who created you",
+            "who is your creator",
+            "your creator",
+            "made you",
+            "created you",
+            "who built you",
+            "who developed you",
+
+            # Hindi / Hinglish
+            "kisne banaya",
+            "tumhe kisne banaya",
+            "tumko kisne banaya",
+            "banaya kisne",
+            "creator kaun hai",
+            "tumhara creator kaun",
+            "tumhara malik kaun"
+        ]
+
+        if any(trigger in msg_lower for trigger in creator_triggers):
+            return jsonify({
+                "reply": "I was created by Gaurav Pathak."
+            })
+
+        # 🔹 Normal conversation
         conversation.append({
             "role": "user",
             "content": user_msg
