@@ -1,26 +1,32 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
+from dotenv import load_dotenv
+
+# 🔹 Load .env file
+load_dotenv()
 
 app = Flask(__name__)
 
+# 🔹 API Key (env se)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
+# 🔹 Safety check
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY not found. Check your .env file.")
+
+# 🔹 Conversation memory
 conversation = [
     {
         "role": "system",
-        "content": """
-You are GP Chat, a smart AI assistant.
-
-IMPORTANT RULE:
-- Detect the user's language automatically.
-- If the user writes in:
-  • English → reply in English
-  • Hindi → reply in Hindi
-  • Hinglish → reply in Hinglish
-- NEVER change language unless the user does.
-- Be helpful, polite, and clear.
-"""
+        "content": (
+            "You are GP Chat, a smart AI assistant.\n"
+            "Detect user's language automatically.\n"
+            "English → English\n"
+            "Hindi → Hindi\n"
+            "Hinglish → Hinglish\n"
+            "Be polite, helpful, and clear."
+        )
     }
 ]
 
@@ -30,39 +36,50 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_msg = request.json.get("message")
+    try:
+        user_msg = request.json.get("message")
 
-    conversation.append({
-        "role": "user",
-        "content": user_msg
-    })
+        if not user_msg:
+            return jsonify({"reply": "Message empty hai."})
 
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "openai/gpt-3.5-turbo",
-            "messages": conversation,
-            "temperature": 0.6
-        }
-    )
+        conversation.append({
+            "role": "user",
+            "content": user_msg
+        })
 
-    data = response.json()
-    bot_reply = data["choices"][0]["message"]["content"]
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "openai/gpt-3.5-turbo",
+                "messages": conversation,
+                "temperature": 0.6
+            },
+            timeout=30
+        )
 
-    conversation.append({
-        "role": "assistant",
-        "content": bot_reply
-    })
+        data = response.json()
 
-    return jsonify({"reply": bot_reply})
+        # 🔴 Error safety
+        if "choices" not in data:
+            return jsonify({"reply": "AI service error. Try again."})
 
-import os
+        bot_reply = data["choices"][0]["message"]["content"]
+
+        conversation.append({
+            "role": "assistant",
+            "content": bot_reply
+        })
+
+        return jsonify({"reply": bot_reply})
+
+    except Exception as e:
+        print("ERROR:", e)
+        return jsonify({"reply": "AI service error"})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run(host="0.0.0.0", port=port, debug=True)
