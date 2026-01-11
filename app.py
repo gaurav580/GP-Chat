@@ -1,19 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import os
-from dotenv import load_dotenv
-
-# 🔹 Load .env file
-load_dotenv()
 
 app = Flask(__name__)
 
-# 🔹 API Key (env se)
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# 🔑 Railway se ENV variable
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
-# 🔹 Safety check
+# ❌ Railway me dotenv / raise error use nahi karte
 if not OPENROUTER_API_KEY:
-    raise ValueError("OPENROUTER_API_KEY not found. Check your .env file.")
+    print("WARNING: OPENROUTER_API_KEY not set")
 
 # 🔹 Conversation memory
 conversation = [
@@ -39,45 +35,23 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        user_msg = request.json.get("message", "").strip()
+        data = request.get_json()
+        user_msg = data.get("message", "").strip()
 
         if not user_msg:
             return jsonify({"reply": "Message empty hai."})
 
         msg_lower = user_msg.lower()
 
-        # 🔒 HARD CREATOR FIX (ALL LANGUAGES)
         creator_triggers = [
-            # English
-            "who made you",
-            "who created you",
-            "who is your creator",
-            "your creator",
-            "made you",
-            "created you",
-            "who built you",
-            "who developed you",
-
-            # Hindi / Hinglish
-            "kisne banaya",
-            "tumhe kisne banaya",
-            "tumko kisne banaya",
-            "banaya kisne",
-            "creator kaun hai",
-            "tumhara creator kaun",
-            "tumhara malik kaun"
+            "who made you", "who created you", "creator kaun",
+            "kisne banaya", "tumhara creator"
         ]
 
-        if any(trigger in msg_lower for trigger in creator_triggers):
-            return jsonify({
-                "reply": "I was created by Gaurav Pathak."
-            })
+        if any(t in msg_lower for t in creator_triggers):
+            return jsonify({"reply": "I was created by Gaurav Pathak."})
 
-        # 🔹 Normal conversation
-        conversation.append({
-            "role": "user",
-            "content": user_msg
-        })
+        conversation.append({"role": "user", "content": user_msg})
 
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -93,25 +67,21 @@ def chat():
             timeout=30
         )
 
-        data = response.json()
+        result = response.json()
 
-        # 🔴 Error safety
-        if "choices" not in data:
-            return jsonify({"reply": "AI service error. Try again."})
+        if "choices" not in result:
+            return jsonify({"reply": "AI error. Try again."})
 
-        bot_reply = data["choices"][0]["message"]["content"]
+        reply = result["choices"][0]["message"]["content"]
+        conversation.append({"role": "assistant", "content": reply})
 
-        conversation.append({
-            "role": "assistant",
-            "content": bot_reply
-        })
-
-        return jsonify({"reply": bot_reply})
+        return jsonify({"reply": reply})
 
     except Exception as e:
         print("ERROR:", e)
-        return jsonify({"reply": "AI service error"})
+        return jsonify({"reply": "Server error"})
 
+# 🚀 Railway ke liye
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
