@@ -4,14 +4,12 @@ import os
 
 app = Flask(__name__)
 
-# 🔑 Railway se ENV variable
+# 🔑 Railway ENV variable
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
-# ❌ Railway me dotenv / raise error use nahi karte
 if not OPENROUTER_API_KEY:
     print("WARNING: OPENROUTER_API_KEY not set")
 
-# 🔹 Conversation memory
 conversation = [
     {
         "role": "system",
@@ -44,8 +42,9 @@ def chat():
         msg_lower = user_msg.lower()
 
         creator_triggers = [
-            "who made you", "who created you", "creator kaun",
-            "kisne banaya", "tumhara creator"
+            "who made you", "who created you",
+            "creator kaun", "kisne banaya",
+            "tumhara creator"
         ]
 
         if any(t in msg_lower for t in creator_triggers):
@@ -63,14 +62,10 @@ def chat():
                 "model": "openai/gpt-3.5-turbo",
                 "messages": conversation,
                 "temperature": 0.6
-            },
-            timeout=30
+            }
         )
 
         result = response.json()
-
-        if "choices" not in result:
-            return jsonify({"reply": "AI error. Try again."})
 
         reply = result["choices"][0]["message"]["content"]
         conversation.append({"role": "assistant", "content": reply})
@@ -81,7 +76,7 @@ def chat():
         print("ERROR:", e)
         return jsonify({"reply": "Server error"})
 
-# 🚀 Railway ke liye
+# 🚀 Railway entrypoint
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
